@@ -70,3 +70,15 @@ def upload():
         })
 
     return render_template("upload.html", caption=caption_text, is_animal=is_animal, is_food=is_food)
+
+
+
+
+
+
+
+
+
+
+
+A MODIFIER !!

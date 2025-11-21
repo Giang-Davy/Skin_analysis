@@ -73,3 +73,7 @@ def delete(file_id):
         pass
 
     return redirect("/images")
+
+
+
+A MODIFIER
