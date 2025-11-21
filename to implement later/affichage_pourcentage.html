@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Probabilités des Classes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+        }
+        .bar-container {
+            width: 100%;
+            background: #ddd;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .bar {
+            height: 25px;
+            line-height: 25px;
+            color: white;
+            text-align: right;
+            padding-right: 10px;
+            font-weight: bold;
+        }
+        .class-block {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Probabilité par Classe</h1>
+
+<div id="results"></div>
+
+<script>
+    // Exemple de données reçues de ton script Python
+    // (tu vas remplacer ceci dynamiquement)
+    const data = {
+        "akiec": 2,
+        "bcc": 14,
+        "bkl": 8,
+        "df": 1,
+        "mel": 22,
+        "nv": 51,
+        "vasc": 2
+    };
+
+    function displayResults(probabilities) {
+        const container = document.getElementById("results");
+        container.innerHTML = "";
+
+        Object.entries(probabilities).forEach(([classe, pourcentage]) => {
+            const block = document.createElement("div");
+            block.className = "class-block";
+
+            block.innerHTML = `
+                <strong>${classe}</strong> — ${pourcentage}%<br>
+                <div class="bar-container">
+                    <div class="bar" style="width:${pourcentage}%; background: hsl(${(100 - pourcentage) * 1.2}, 70%, 45%);">
+                        ${pourcentage}%
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(block);
+        });
+    }
+
+    displayResults(data);
+</script>
+
+</body>
+</html>
