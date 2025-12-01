@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 from flask import Blueprint, request, render_template, session, redirect
 from PIL import Image
-import torch
-from config import fs, captions_collection, food_collection, animals_collection, device
-from models.caption_model import model, tokenizer, transform
-from utils.caption_utils import contains_animal, contains_food
+from config import fs, captions_collection
+from models.caption_model import load_model, generate_caption
 
 upload_bp = Blueprint("upload", __name__)
+
+# Load the BLIP model once at import time so we don't reload on every request.
+model, processor = load_model()
+
 
 @upload_bp.route("/", methods=["GET"])
 def index():
@@ -26,59 +28,18 @@ def upload():
     file = request.files["file"]
     file_id = fs.put(file, filename=file.filename)
 
+    # Read back from GridFS and create a PIL image
     grid_out = fs.get(file_id)
     image = Image.open(grid_out).convert("RGB")
-    image_tensor = transform(image).unsqueeze(0).to(device)
 
-    input_ids = torch.tensor([tokenizer.bos_token_id]).unsqueeze(0).to(device)
-    max_len = 20
-    features = model.encoder(image_tensor)
-    caption_tokens = input_ids
-    for _ in range(max_len):
-        outputs = model.decoder(features, caption_tokens)
-        next_token_logits = outputs[:, -1, :]
-        next_token_id = next_token_logits.argmax(1).unsqueeze(0)
-        caption_tokens = torch.cat((caption_tokens, next_token_id), dim=1)
+    # Generate caption using the BLIP model (supports PIL Image)
+    caption_text = generate_caption(model, processor, image)
 
-    caption_text = tokenizer.decode(caption_tokens.squeeze(), skip_special_tokens=True)
-
-    is_animal = contains_animal(caption_text)
-    is_food = contains_food(caption_text)
-
+    # Store only a single captions collection for now
     captions_collection.insert_one({
         "file_id": file_id,
         "caption": caption_text,
-        "user_id": session['user_id'],
-        "is_animal": is_animal,
-        "is_food": is_food
+        "user_id": session['user_id']
     })
 
-    # Splited collections
-    if is_food:
-        food_collection.insert_one({
-            "file_id": file_id,
-            "caption": caption_text,
-            "user_id": session['user_id'],
-            "is_food": True
-        })
-    if is_animal:
-        animals_collection.insert_one({
-            "file_id": file_id,
-            "caption": caption_text,
-            "user_id": session['user_id'],
-            "is_animal": True
-        })
-
-    return render_template("upload.html", caption=caption_text, is_animal=is_animal, is_food=is_food)
-
-
-
-
-
-
-
-
-
-
-
-A MODIFIER !!
+    return render_template("upload.html", caption=caption_text)

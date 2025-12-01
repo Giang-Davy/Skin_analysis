@@ -16,6 +16,3 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 embed_size = 256
 hidden_size = 512
 vocab_size = 50257
-
-
-A MODIFIER 

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-from data.lists import animal_list, list_food
+"""Placeholder caption utilities for the skin captioning project.
 
-def contains_animal(caption_text):
-    caption_words = caption_text.lower().split()
-    return any(mot in caption_words for mot in animal_list)
+The previous project used animal/food detectors. We keep a minimal file
+so imports don't fail; classification is currently disabled and a single
+captions list is used in the DB.
+"""
 
-def contains_food(caption_text):
-    caption_text = caption_text.lower()
-    for mot_food in list_food:
-        if mot_food in caption_text:
-            return True
+def contains_animal(caption_text: str) -> bool:
+    return False
+
+
+def contains_food(caption_text: str) -> bool:
     return False

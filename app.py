@@ -14,14 +14,5 @@ app.register_blueprint(image_bp)
 app.register_blueprint(auth_bp)
 
 
-if "animal" not in db.list_collection_names():
-    db.create_collection("animal")
-
-if "food" not in db.list_collection_names():
-    db.create_collection("food")
-
 if __name__ == "__main__":
     app.run(debug=True)
-
-
-A MODIFIER

@@ -12,22 +12,10 @@ def show_images():
         return redirect("/login")
 
     user_id = session['user_id']
-    category = request.args.get("category", "all")  # all, animal, food, general
-
+    # For now we only support a single list of captions per user.
     images_with_captions = []
 
-    if category == "all":
-        query = {"user_id": user_id}
-    elif category == "animal":
-        query = {"user_id": user_id, "is_animal": True}
-    elif category == "food":
-        query = {"user_id": user_id, "is_food": True}
-    elif category == "general":
-        query = {"user_id": user_id, "is_animal": False, "is_food": False}
-    else:
-        query = {"user_id": user_id}
-
-    for caption_doc in captions_collection.find(query):
+    for caption_doc in captions_collection.find({"user_id": user_id}):
         file_id = caption_doc["file_id"]
         try:
             file = fs.get(file_id)
@@ -42,7 +30,7 @@ def show_images():
         except Exception:
             continue
 
-    return render_template("images.html", images=images_with_captions, category=category)
+    return render_template("images.html", images=images_with_captions)
 
 
 @image_bp.route("/delete_all", methods=["POST"])
@@ -74,6 +62,3 @@ def delete(file_id):
 
     return redirect("/images")
 
-
-
-A MODIFIER

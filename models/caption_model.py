@@ -19,10 +19,15 @@ def load_model():
     return model, processor
 
 def generate_caption(model, processor, image_path):
-    try:
-        image = Image.open(image_path).convert("RGB")
-    except:
-        return "Erreur: Impossible d'ouvrir l'image."
+    # Accept either a file path or a PIL Image instance
+    from PIL import Image as PILImage
+    if isinstance(image_path, PILImage.Image):
+        image = image_path.convert("RGB")
+    else:
+        try:
+            image = Image.open(image_path).convert("RGB")
+        except Exception:
+            return "Erreur: Impossible d'ouvrir l'image."
     
     # Prétraitement
     inputs = processor(images=image, return_tensors="pt").to(DEVICE)
