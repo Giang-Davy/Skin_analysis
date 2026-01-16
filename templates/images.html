@@ -17,8 +17,11 @@
         <div class="card shadow-sm">
             <img src="data:image/jpeg;base64,{{ item.img }}" class="card-img-top">
             <div class="card-body">
-                <p class="card-text">{{ item.caption }}</p>
-                <form action="/delete/{{ item.file_id }}" method="post">
+                <form action="/edit_caption/{{ item.file_id }}" method="post">
+                    <textarea name="new_caption" class="form-control mb-2" rows="3">{{ item.caption }}</textarea>
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                </form>
+                <form action="/delete/{{ item.file_id }}" method="post" class="mt-2">
                     <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
                 </form>
             </div>

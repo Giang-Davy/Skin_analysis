@@ -46,19 +46,20 @@ def delete_all():
     return redirect("/images")
 
 
-@image_bp.route("/delete/<file_id>", methods=["POST"])
-def delete(file_id):
+@image_bp.route("/edit_caption/<file_id>", methods=["POST"])
+def edit_caption(file_id):
     if "user_id" not in session:
         return redirect("/login")
 
     user_id = session['user_id']
-    fid = ObjectId(file_id)
+    new_caption = request.form.get("new_caption", "").strip()
 
-    captions_collection.delete_one({"file_id": fid, "user_id": user_id})
-    try:
-        fs.delete(fid)
-    except Exception:
-        pass
+    if new_caption:
+        # Mettre à jour la caption dans MongoDB pour cet utilisateur et ce file_id
+        captions_collection.update_one(
+            {"file_id": ObjectId(file_id), "user_id": user_id},
+            {"$set": {"caption": new_caption}}
+        )
 
     return redirect("/images")
 
