@@ -2,6 +2,7 @@
 
 import os
 import torch
+import re
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
 
@@ -16,6 +17,13 @@ MODEL_WEIGHTS = os.path.join(
 
 _processor = None
 _model = None
+
+def post_process_caption(caption):
+    # Capitalize the first letter
+    caption = caption[0].upper() + caption[1:] if caption else caption
+    # Capitalize after periods
+    caption = re.sub(r'\. (\w)', lambda m: '. ' + m.group(1).upper(), caption)
+    return caption
 
 
 def load_model():
@@ -57,7 +65,9 @@ def generate_caption(model, processor, image):
             num_beams=4
         )
 
-    return processor.decode(
+    caption = processor.decode(
         output_ids[0],
         skip_special_tokens=True
     )
+    
+    return post_process_caption(caption)

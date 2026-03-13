@@ -17,11 +17,11 @@
         <div class="card shadow-sm">
             <img src="data:image/jpeg;base64,{{ item.img }}" class="card-img-top">
             <div class="card-body">
-                <form action="/edit_caption/{{ item.file_id }}" method="post">
-                    <textarea name="new_caption" class="form-control mb-2" rows="3">{{ item.caption }}</textarea>
-                    <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                <form action="/edit_caption/{{ item.file_id }}" method="post" class="d-inline">
+                    <textarea name="new_caption" class="form-control auto-resize mb-2">{{ item.caption }}</textarea>
+                    <button type="submit" class="btn btn-sm btn-outline-primary me-2">Save</button>
                 </form>
-                <form action="/delete/{{ item.file_id }}" method="post" class="mt-2">
+                <form action="/delete/{{ item.file_id }}" method="post" class="d-inline">
                     <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
                 </form>
             </div>
@@ -29,4 +29,17 @@
     </div>
     {% endfor %}
 </div>
+
+<script>
+function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+}
+
+document.querySelectorAll('.auto-resize').forEach(textarea => {
+    autoResize(textarea);
+    textarea.addEventListener('input', () => autoResize(textarea));
+});
+</script>
+
 {% endblock %}
