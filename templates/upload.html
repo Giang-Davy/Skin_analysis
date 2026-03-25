@@ -2,13 +2,12 @@
 {% block title %}Upload Image{% endblock %}
 {% block content %}
 
-<h2 class="mb-4">Upload an image</h2>
+<h2 class="mb-4">Upload an Image</h2>
 
 <form action="/upload" method="post" enctype="multipart/form-data" class="mb-3" onsubmit="showLoading()">
     <div class="mb-3">
         <input type="file" name="file" class="form-control" required>
     </div>
-
     <button type="submit" class="btn btn-primary" id="uploadBtn">
         Upload
     </button>

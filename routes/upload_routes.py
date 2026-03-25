@@ -26,6 +26,13 @@ def upload():
         return render_template("upload.html", error="Aucun fichier uploadé.")
 
     file = request.files["file"]
+    folder_raw = request.form.get("folder", "").strip()
+    folder = folder_raw or "all"
+    if "/" in folder or "\\" in folder:
+        folder = folder.replace("\\", "").split("/")[0].strip() or "all"
+    if folder == "":
+        folder = "all"
+
     file_id = fs.put(file, filename=file.filename)
 
     # Read back from GridFS and create a PIL image
@@ -35,11 +42,17 @@ def upload():
     # Generate caption using the BLIP model (supports PIL Image)
     caption_text = generate_caption(model, processor, image)
 
-    # Store only a single captions collection for now
+    # Store caption with folder metadata
     captions_collection.insert_one({
         "file_id": file_id,
         "caption": caption_text,
-        "user_id": session['user_id']
+        "user_id": session['user_id'],
+        "folder": folder
     })
+
+    # Save folder livedata in folder collection
+    if folder != "all":
+        from config import folders_collection
+        folders_collection.update_one({"user_id": session['user_id'], "folder": folder}, {"$setOnInsert": {"user_id": session['user_id'], "folder": folder}}, upsert=True)
 
     return render_template("upload.html", caption=caption_text)

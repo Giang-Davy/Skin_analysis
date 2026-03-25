@@ -8,6 +8,7 @@ client = MongoClient("mongodb://localhost:27017/")
 db = client["Data"]
 fs = gridfs.GridFS(db)
 captions_collection = db["captions"]
+folders_collection = db["folders"]
 animals_collection = db["animals"]
 food_collection = db["foods"]
 

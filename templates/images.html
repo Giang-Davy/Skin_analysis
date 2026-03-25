@@ -3,8 +3,26 @@
 {% block content %}
 <h2 class="mb-4">Uploaded Images</h2>
 
-<div class="mb-4">
-    <a href="/images" class="btn btn-outline-primary active">All</a>
+<form action="/create_folder" method="post" class="mb-3">
+    <div class="input-group">
+        <input name="new_folder" type="text" class="form-control" placeholder="Create a Tag (e.g. face)">
+        <button class="btn btn-outline-success" type="submit">Create</button>
+    </div>
+    <small class="text-muted">Tag will help to organize your descriptions.</small>
+</form>
+
+<div class="mb-4 folder-list">
+    <a href="/images?folder=all" class="btn btn-outline-primary {{ 'active' if selected_folder == 'all' else '' }}">All</a>
+    {% for folder in folders %}
+        {% if folder != 'all' %}
+            <span class="folder-pill btn btn-outline-secondary {{ 'active' if selected_folder == folder else '' }}">
+                <a href="/images?folder={{ folder | urlencode }}" class="text-decoration-none text-dark">{{ folder }}</a>
+                <form action="/delete_folder/{{ folder }}" method="post" class="d-inline ms-1">
+                    <button type="submit" class="btn btn-sm btn-outline-danger p-1" title="Delete folder" onclick="return confirm('Delete folder {{ folder }}?')">✖</button>
+                </form>
+            </span>
+        {% endif %}
+    {% endfor %}
 </div>
 
 <form action="/delete_all" method="post" class="mb-4">
@@ -12,34 +30,303 @@
 </form>
 
 <div class="row">
+    {% if images|length == 0 %}
+    <div class="col-12 mb-4">
+        <div class="alert alert-info">No images are available. Upload an image to get started.</div>
+    </div>
+    {% endif %}
     {% for item in images %}
     <div class="col-md-4 mb-4">
-        <div class="card shadow-sm">
-            <img src="data:image/jpeg;base64,{{ item.img }}" class="card-img-top">
+        <div class="card shadow-sm position-relative image-card" data-file-id="{{ item.file_id }}" data-current-folder="{{ item.folder }}">
+            <!-- Image -->
+            <img src="data:image/jpeg;base64,{{ item.img }}" class="card-img-top image-preview">
+            
+            <!-- Menu Kebab Icon -->
+            <div class="position-absolute top-0 end-0 p-2">
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-light rounded-circle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Options">
+                        ⋯
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#" onclick="enterEditMode(event, this)">✏️ Edit</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="enterMoveMode(event, this)">📁 Move</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form action="/delete/{{ item.file_id }}" method="post" style="display:inline;">
+                                <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Delete this image?')">🗑️ Delete</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
             <div class="card-body">
-                <form action="/edit_caption/{{ item.file_id }}" method="post" class="d-inline">
-                    <textarea name="new_caption" class="form-control auto-resize mb-2">{{ item.caption }}</textarea>
-                    <button type="submit" class="btn btn-sm btn-outline-primary me-2">Save</button>
-                </form>
-                <form action="/delete/{{ item.file_id }}" method="post" class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                </form>
+                <!-- Folder display -->
+                <p class="mb-2"><strong>Tag :</strong> <span class="folder-display">{{ item.folder }}</span></p>
+                
+                <!-- Normal mode : caption display -->
+                <div class="caption-display-mode">
+                    <p class="caption-text">{{ item.caption }}</p>
+                </div>
+                
+                <!-- Mode édition : textarea pour caption -->
+                <div class="caption-edit-mode" style="display: none;">
+                    <textarea class="form-control auto-resize caption-textarea" rows="3">{{ item.caption }}</textarea>
+                    <div class="mt-2 d-flex gap-2">
+                        <button class="btn btn-sm btn-success save-caption-btn" onclick="saveCaption(event, this)">💾 Save</button>
+                        <button class="btn btn-sm btn-secondary cancel-edit-btn" onclick="cancelEdit(event, this)">✖️ Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Move mode : folder selector -->
+                <div class="move-mode" style="display: none;">
+                    <label class="form-label small">Select a folder:</label>
+                    <div class="folder-selector">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <button class="btn btn-sm btn-outline-secondary folder-btn" data-folder="all" onclick="moveToFolder(event, this)">all</button>
+                        </div>
+                        {% for folder in folders %}
+                        {% if folder != 'all' %}
+                        <div class="d-flex align-items-center gap-2 mb-1 folder-selection-item">
+                            <button class="btn btn-sm btn-outline-secondary folder-btn" data-folder="{{ folder }}" onclick="moveToFolder(event, this)">{{ folder }}</button>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-secondary cancel-move-btn" onclick="cancelMove(event, this)">✖️ Cancel</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     {% endfor %}
 </div>
 
+<style>
+.image-card {
+    transition: transform 0.2s;
+}
+
+.image-card:hover {
+    transform: translateY(-2px);
+}
+
+.dropdown-menu {
+    min-width: 150px;
+}
+
+.dropdown-item {
+    cursor: pointer;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.caption-edit-mode,
+.move-mode {
+    animation: slideDown 0.2s ease-in;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.folder-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.folder-selection-item {
+    align-items: center;
+}
+
+.delete-folder-btn {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.folder-selection-item:hover .delete-folder-btn {
+    opacity: 1;
+}
+
+.folder-btn {
+    flex: 1;
+    min-width: 70px;
+}
+
+.folder-btn.active {
+    background-color: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+}
+
+.folder-list .folder-pill {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 0.4rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.4rem;
+}
+
+.folder-list .folder-pill form {
+    margin: 0;
+}
+
+.auto-resize {
+    resize: none;
+    overflow: hidden;
+}
+
+.caption-text {
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    margin: 0;
+}
+</style>
+
 <script>
+// Fonction pour redimensionner automatiquement les textarea
 function autoResize(textarea) {
     textarea.style.height = 'auto';
     textarea.style.height = textarea.scrollHeight + 'px';
 }
 
+// Appliquer auto-resize à tous les textarea existants
 document.querySelectorAll('.auto-resize').forEach(textarea => {
     autoResize(textarea);
     textarea.addEventListener('input', () => autoResize(textarea));
 });
+
+// Entrer en mode édition
+function enterEditMode(event, element) {
+    event.preventDefault();
+    const card = element.closest('.image-card');
+    
+    // Masquer affichage normal, afficher le mode édition
+    card.querySelector('.caption-display-mode').style.display = 'none';
+    card.querySelector('.caption-edit-mode').style.display = 'block';
+    
+    // Auto-resize le textarea
+    const textarea = card.querySelector('.caption-textarea');
+    autoResize(textarea);
+    textarea.focus();
+    
+    // Fermer le dropdown
+    const dropdown = element.closest('.dropdown');
+    bootstrap.Dropdown.getInstance(dropdown.querySelector('[data-bs-toggle="dropdown"]'))?.hide();
+}
+
+// Sauvegarder la caption
+function saveCaption(event, button) {
+    event.preventDefault();
+    const card = button.closest('.image-card');
+    const fileId = card.dataset.fileId;
+    const newCaption = card.querySelector('.caption-textarea').value;
+    
+    // Créer un formulaire invisible et soumettre
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/edit_caption/${fileId}`;
+    
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'new_caption';
+    input.value = newCaption;
+    
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Annuler l'édition
+function cancelEdit(event, button) {
+    event.preventDefault();
+    const card = button.closest('.image-card');
+    
+    // Revenir à l'affichage normal
+    card.querySelector('.caption-display-mode').style.display = 'block';
+    card.querySelector('.caption-edit-mode').style.display = 'none';
+}
+
+// Entrer en mode déplacement
+function enterMoveMode(event, element) {
+    event.preventDefault();
+    const card = element.closest('.image-card');
+    
+    // Masquer affichage normal
+    card.querySelector('.caption-display-mode').style.display = 'none';
+    card.querySelector('.move-mode').style.display = 'block';
+    
+    // Mettre en évidence le dossier courant
+    const currentFolder = card.dataset.currentFolder;
+    card.querySelectorAll('.folder-btn').forEach(btn => {
+        if (btn.dataset.folder === currentFolder) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Fermer le dropdown
+    const dropdown = element.closest('.dropdown');
+    bootstrap.Dropdown.getInstance(dropdown.querySelector('[data-bs-toggle="dropdown"]'))?.hide();
+}
+
+// Déplacer vers un dossier
+function moveToFolder(event, button) {
+    event.preventDefault();
+    const card = button.closest('.image-card');
+    const fileId = card.dataset.fileId;
+    const newFolder = button.dataset.folder;
+    
+    // Créer un formulaire invisible et soumettre
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/move_image/${fileId}`;
+    
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'folder';
+    input.value = newFolder;
+    
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Annuler le déplacement
+function cancelMove(event, button) {
+    event.preventDefault();
+    const card = button.closest('.image-card');
+    
+    // Revenir à l'affichage normal
+    card.querySelector('.caption-display-mode').style.display = 'block';
+    card.querySelector('.move-mode').style.display = 'none';
+}
+
+function deleteFolder(event, folderName) {
+    event.preventDefault();
+    if (!confirm(`Delete folder '${folderName}' ?`)) {
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/delete_folder/${encodeURIComponent(folderName)}`;
+    document.body.appendChild(form);
+    form.submit();
+}
 </script>
 
 {% endblock %}
