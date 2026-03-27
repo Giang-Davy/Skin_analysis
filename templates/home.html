@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Home - Skin Analysis{% endblock %}
+{% block content %}
+
+<div class="text-center">
+    <h1 class="display-4 mb-4">Welcome to Skin Analysis</h1>
+    <p class="lead mb-4">
+        Explore our advanced skin analysis app. Use AI to analyze skin images and get accurate descriptive captions.
+    </p>
+    <p class="mb-4">
+        Upload your images and let our model generate detailed skin condition descriptions.
+    </p>
+    <a href="/upload" class="btn btn-primary btn-lg">Go to Upload</a>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <h3>Easy Upload</h3>
+        <p>Upload your skin images in just a few clicks.</p>
+    </div>
+    <div class="col-md-4">
+        <h3>AI Analysis</h3>
+        <p>Our AI model analyzes and accurately describes your skin.</p>
+    </div>
+    <div class="col-md-4">
+        <h3>Instant Results</h3>
+        <p>Get descriptive captions in real-time.</p>
+    </div>
+</div>
+
+{% endblock %}

@@ -12,6 +12,11 @@ model, processor = load_model()
 
 @upload_bp.route("/", methods=["GET"])
 def index():
+    return render_template("home.html")
+
+
+@upload_bp.route("/upload", methods=["GET"])
+def upload_form():
     if "user_id" not in session:
         return redirect("/login")
     return render_template("upload.html")
