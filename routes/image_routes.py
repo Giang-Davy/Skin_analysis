@@ -12,18 +12,31 @@ def show_images():
         return redirect("/login")
 
     user_id = session['user_id']
+    # support filtering by single folder (folder=...) or multiple tags (tags=tag1,tag2)
     selected_folder = request.args.get("folder", "all")
+    tags_param = request.args.get("tags")
 
     folders = set(["all"])
     for doc in captions_collection.find({"user_id": user_id}):
         folder = doc.get("folder", "all") or "all"
         folders.add(folder)
+        for t in doc.get("tags", []):
+            folders.add(t)
     for fdoc in folders_collection.find({"user_id": user_id}):
         folder = fdoc.get("folder", "all") or "all"
         folders.add(folder)
 
     query = {"user_id": user_id}
-    if selected_folder != "all":
+    if tags_param:
+        selected_tags = [t for t in tags_param.split(',') if t]
+        if selected_tags:
+            # Require that image has ALL selected tags (logical AND).
+            # For backward compatibility, if only one tag is selected, also allow matching by legacy 'folder' field.
+            if len(selected_tags) == 1:
+                query["$or"] = [{"tags": {"$all": selected_tags}}, {"folder": selected_tags[0]}]
+            else:
+                query["tags"] = {"$all": selected_tags}
+    elif selected_folder and selected_folder != "all":
         query["folder"] = selected_folder
 
     images_with_captions = []
@@ -35,11 +48,13 @@ def show_images():
             encoded = base64.b64encode(data).decode('utf-8')
             caption = caption_doc.get("caption", "")
             folder = caption_doc.get("folder", "all") or "all"
+            tags = caption_doc.get("tags", [])
             images_with_captions.append({
                 "img": encoded,
                 "caption": caption,
                 "file_id": str(file_id),
-                "folder": folder
+                "folder": folder,
+                "tags": tags
             })
         except Exception:
             continue
@@ -82,6 +97,14 @@ def delete_folder(folder_name):
     user_id = session['user_id']
     # Remove all folder references in captions to all if needed
     captions_collection.update_many({"user_id": user_id, "folder": folder_name}, {"$set": {"folder": "all"}})
+    # Also remove this tag from any tags arrays on caption documents
+    captions_collection.update_many({"user_id": user_id}, {"$pull": {"tags": folder_name}})
+    # If any captions now have an empty tags array, ensure folder is set to 'all'
+    try:
+        captions_collection.update_many({"user_id": user_id, "tags": []}, {"$set": {"folder": "all"}})
+    except Exception:
+        pass
+
     folders_collection.delete_one({"user_id": user_id, "folder": folder_name})
 
     return redirect('/images')
@@ -128,23 +151,36 @@ def move_image(file_id):
         return redirect("/login")
 
     user_id = session['user_id']
-    new_folder = request.form.get("folder", "").strip() or "all"
-    if "/" in new_folder or "\\" in new_folder:
-        new_folder = new_folder.replace("\\", "").split("/")[0].strip() or "all"
+    # Accept multiple tags from the form (checkboxes named 'tags')
+    tags = request.form.getlist("tags")
+    # Fallback to single-folder param for backward compat
+    if not tags:
+        new_folder = request.form.get("folder", "").strip() or "all"
+        if "/" in new_folder or "\\" in new_folder:
+            new_folder = new_folder.replace("\\", "").split("/")[0].strip() or "all"
+        tags = [new_folder]
+
+    # sanitize tags (remove empty)
+    tags = [t for t in tags if t]
 
     try:
+        # set tags array on caption doc
         captions_collection.update_one(
             {"file_id": ObjectId(file_id), "user_id": user_id},
-            {"$set": {"folder": new_folder}}
+            {"$set": {"tags": tags}}
         )
-        if new_folder != "all":
-            folders_collection.update_one(
-                {"user_id": user_id, "folder": new_folder},
-                {"$setOnInsert": {"user_id": user_id, "folder": new_folder}},
-                upsert=True
-            )
+        # ensure tags exist in folders_collection
+        for t in tags:
+            if t != "all":
+                folders_collection.update_one(
+                    {"user_id": user_id, "folder": t},
+                    {"$setOnInsert": {"user_id": user_id, "folder": t}},
+                    upsert=True
+                )
     except Exception:
         pass
 
-    return redirect(f"/images?folder={new_folder}")
+    # redirect to images filtered by the tags
+    redirect_tags = ",".join(tags) if tags else "all"
+    return redirect(f"/images?tags={redirect_tags}")
 

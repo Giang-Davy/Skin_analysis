@@ -11,18 +11,33 @@
     <small class="text-muted">Tag will help to organize your descriptions.</small>
 </form>
 
-<div class="mb-4 folder-list">
-    <a href="/images?folder=all" class="btn btn-outline-primary {{ 'active' if selected_folder == 'all' else '' }}">All</a>
-    {% for folder in folders %}
-        {% if folder != 'all' %}
-            <span class="folder-pill btn btn-outline-secondary {{ 'active' if selected_folder == folder else '' }}">
-                <a href="/images?folder={{ folder | urlencode }}" class="text-decoration-none text-dark">{{ folder }}</a>
-                <form action="/delete_folder/{{ folder }}" method="post" class="d-inline ms-1">
-                    <button type="submit" class="btn btn-sm btn-outline-danger p-1" title="Delete folder" onclick="return confirm('Delete folder {{ folder }}?')">✖</button>
-                </form>
-            </span>
-        {% endif %}
-    {% endfor %}
+<div class="mb-3">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <strong>Filter by tags:</strong>
+        <button class="btn btn-outline-primary btn-sm" onclick="clearTagFilters()">Clear</button>
+        <button class="btn btn-outline-success btn-sm" onclick="applyTagFilters()">Apply</button>
+    </div>
+    <div class="tag-filter">
+        {% for folder in folders %}
+            <label class="form-check form-check-inline">
+                <input class="form-check-input tag-filter-checkbox" type="checkbox" value="{{ folder }}" {% if folder == 'all' %}checked disabled{% endif %}>
+                <span class="form-check-label">{{ folder }}</span>
+            </label>
+        {% endfor %}
+    </div>
+    <div class="mt-2 folder-list">
+        <a href="/images?folder=all" class="btn btn-outline-primary {{ 'active' if selected_folder == 'all' else '' }}">All</a>
+        {% for folder in folders %}
+            {% if folder != 'all' %}
+                <span class="folder-pill btn btn-outline-secondary {{ 'active' if selected_folder == folder else '' }}">
+                    <a href="/images?folder={{ folder | urlencode }}" class="text-decoration-none text-dark">{{ folder }}</a>
+                    <form action="/delete_folder/{{ folder }}" method="post" class="d-inline ms-1">
+                        <button type="submit" class="btn btn-sm btn-outline-danger p-1" title="Delete folder" onclick="return confirm('Delete folder {{ folder }}?')">✖</button>
+                    </form>
+                </span>
+            {% endif %}
+        {% endfor %}
+    </div>
 </div>
 
 <form action="/delete_all" method="post" class="mb-4">
@@ -37,7 +52,7 @@
     {% endif %}
     {% for item in images %}
     <div class="col-md-4 mb-4">
-        <div class="card shadow-sm position-relative image-card" data-file-id="{{ item.file_id }}" data-current-folder="{{ item.folder }}">
+        <div class="card shadow-sm position-relative image-card" data-file-id="{{ item.file_id }}" data-current-folder="{{ item.folder }}" data-current-tags="{{ item.tags | join(',') }}">
             <!-- Image -->
             <img src="data:image/jpeg;base64,{{ item.img }}" class="card-img-top image-preview">
             
@@ -62,8 +77,24 @@
             </div>
 
             <div class="card-body">
-                <!-- Folder display -->
-                <p class="mb-2"><strong>Tag :</strong> <span class="folder-display">{{ item.folder }}</span></p>
+                <!-- Folder / Tags display -->
+                <p class="mb-2"><strong>Tag :</strong>
+                    {% set effective_tags = item.tags if item.tags is defined else [] %}
+                    {% if effective_tags | length > 0 and not (effective_tags | length == 1 and effective_tags[0] == 'all') %}
+                        <span class="ms-2">
+                            {% for t in effective_tags %}
+                                {% if t and t != 'all' %}
+                                    <label class="form-check form-check-inline mb-0">
+                                        <input class="form-check-input" type="checkbox" disabled checked>
+                                        <span class="form-check-label small">{{ t }}</span>
+                                    </label>
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+                    {% else %}
+                        <span class="folder-display ms-2">{{ item.folder }}</span>
+                    {% endif %}
+                </p>
                 
                 <!-- Normal mode : caption display -->
                 <div class="caption-display-mode">
@@ -79,24 +110,23 @@
                     </div>
                 </div>
 
-                <!-- Move mode : folder selector -->
+                <!-- Move mode : tags multi-selector -->
                 <div class="move-mode" style="display: none;">
-                    <label class="form-label small">Select a folder:</label>
-                    <div class="folder-selector">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <button class="btn btn-sm btn-outline-secondary folder-btn" data-folder="all" onclick="moveToFolder(event, this)">all</button>
+                    <label class="form-label small">Select tags (multiple):</label>
+                    <form action="/move_image/{{ item.file_id }}" method="post" class="move-form">
+                        <div class="folder-selector">
+                            {% for folder in folders %}
+                                <label class="form-check me-2">
+                                    <input class="form-check-input" type="checkbox" name="tags" value="{{ folder }}" {% if folder=='all' %}checked{% endif %}>
+                                    <span class="form-check-label">{{ folder }}</span>
+                                </label>
+                            {% endfor %}
                         </div>
-                        {% for folder in folders %}
-                        {% if folder != 'all' %}
-                        <div class="d-flex align-items-center gap-2 mb-1 folder-selection-item">
-                            <button class="btn btn-sm btn-outline-secondary folder-btn" data-folder="{{ folder }}" onclick="moveToFolder(event, this)">{{ folder }}</button>
+                        <div class="mt-2 d-flex gap-2">
+                            <button class="btn btn-sm btn-primary" type="submit">Apply</button>
+                            <button class="btn btn-sm btn-secondary" type="button" onclick="cancelMove(event, this)">✖️ Cancel</button>
                         </div>
-                        {% endif %}
-                        {% endfor %}
-                    </div>
-                    <div class="mt-2">
-                        <button class="btn btn-sm btn-secondary cancel-move-btn" onclick="cancelMove(event, this)">✖️ Cancel</button>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -196,6 +226,22 @@
 </style>
 
 <script>
+// Restore tag filter checkboxes from localStorage on load
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const stored = localStorage.getItem('tagFilters');
+        if (stored) {
+            const arr = JSON.parse(stored || '[]');
+            if (Array.isArray(arr)) {
+                document.querySelectorAll('.tag-filter-checkbox').forEach(cb => {
+                    cb.checked = arr.includes(cb.value);
+                });
+            }
+        }
+    } catch (e) {
+        console.warn('Could not restore tag filters', e);
+    }
+});
 // Fonction pour redimensionner automatiquement les textarea
 function autoResize(textarea) {
     textarea.style.height = 'auto';
@@ -263,46 +309,39 @@ function cancelEdit(event, button) {
 function enterMoveMode(event, element) {
     event.preventDefault();
     const card = element.closest('.image-card');
-    
+
     // Masquer affichage normal
     card.querySelector('.caption-display-mode').style.display = 'none';
     card.querySelector('.move-mode').style.display = 'block';
-    
-    // Mettre en évidence le dossier courant
-    const currentFolder = card.dataset.currentFolder;
-    card.querySelectorAll('.folder-btn').forEach(btn => {
-        if (btn.dataset.folder === currentFolder) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
-    
+
+    // Pre-check current tags
+    const currentTags = (card.dataset.currentTags || '').split(',').map(s => s.trim()).filter(Boolean);
+    const form = card.querySelector('.move-form');
+    if (form) {
+        form.querySelectorAll('input[name="tags"]').forEach(inp => {
+            inp.checked = currentTags.includes(inp.value);
+        });
+    }
+
     // Fermer le dropdown
     const dropdown = element.closest('.dropdown');
     bootstrap.Dropdown.getInstance(dropdown.querySelector('[data-bs-toggle="dropdown"]'))?.hide();
 }
 
 // Déplacer vers un dossier
-function moveToFolder(event, button) {
-    event.preventDefault();
-    const card = button.closest('.image-card');
-    const fileId = card.dataset.fileId;
-    const newFolder = button.dataset.folder;
-    
-    // Créer un formulaire invisible et soumettre
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/move_image/${fileId}`;
-    
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'folder';
-    input.value = newFolder;
-    
-    form.appendChild(input);
-    document.body.appendChild(form);
-    form.submit();
+// Apply/clear tag filters at the top
+function applyTagFilters() {
+    const checked = Array.from(document.querySelectorAll('.tag-filter-checkbox:checked')).map(i => i.value).filter(v => v && v !== 'all');
+    // persist selection
+    try { localStorage.setItem('tagFilters', JSON.stringify(checked)); } catch (e) { /* ignore */ }
+    const q = checked.length ? `?tags=${checked.map(encodeURIComponent).join(',')}` : '';
+    window.location = `/images${q}`;
+}
+
+function clearTagFilters() {
+    document.querySelectorAll('.tag-filter-checkbox').forEach(cb => cb.checked = false);
+    try { localStorage.removeItem('tagFilters'); } catch (e) { /* ignore */ }
+    window.location = '/images';
 }
 
 // Annuler le déplacement

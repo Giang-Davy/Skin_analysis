@@ -95,3 +95,74 @@ body {
     margin: 0 auto;
     text-align: center;
 }
+
+.upload-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(245,248,255,0.98));
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 24px;
+    padding: 44px 34px;
+    min-height: 280px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
+}
+
+.upload-card-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    text-align: center;
+}
+
+.upload-card-text {
+    max-width: 520px;
+    flex: 1 1 360px;
+    text-align: center;
+}
+
+.upload-card-title {
+    margin-bottom: 0.5rem;
+    color: #1d2144;
+}
+
+.upload-card-description {
+    color: #5b627a;
+    margin-bottom: 1rem;
+}
+
+.upload-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.upload-file-input {
+    display: none;
+}
+
+.upload-icon {
+    flex: 0 0 180px;
+    min-width: 180px;
+    min-height: 180px;
+    border-radius: 20px;
+    background-color: #eef1fe;
+    background-image: url("../img/upload-icon.png");
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.upload-select-btn {
+    min-width: 160px;
+}
+
+/* Utility to vertically center content within the viewport (adjusts for header height) */
+.center-vertical {
+    min-height: calc(100vh - 160px);
+    display: flex;
+    align-items: center;
+}

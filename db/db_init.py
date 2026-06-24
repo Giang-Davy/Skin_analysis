@@ -14,6 +14,15 @@ def init_db():
         password VARCHAR(255) NOT NULL
     )
     """)
+    # Ensure GDPR consent columns exist (best-effort; ignore if already present)
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN consent_given BOOLEAN DEFAULT FALSE")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN consent_ts TIMESTAMP NULL DEFAULT NULL")
+    except Exception:
+        pass
     
     # History Table (for each users)
     cursor.execute("""

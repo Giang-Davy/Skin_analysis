@@ -14,11 +14,11 @@
     <div class="collapse navbar-collapse">
       <ul class="navbar-nav ms-auto">
         {% if session.get("user_id") %}
-          <li class="nav-item"><a class="nav-link" href="/">Upload</a></li>
+          <li class="nav-item"><a class="nav-link" href="/upload">Upload</a></li>
           <li class="nav-item"><a class="nav-link" href="/images">Images</a></li>
-          <li class="nav-item"><a class="nav-link" href="/logout">Disconnect</a></li>
+          <li class="nav-item"><a class="nav-link" href="/logout">Sign Out</a></li>
         {% else %}
-          <li class="nav-item"><a class="nav-link" href="/login">Connection</a></li>
+          <li class="nav-item"><a class="nav-link" href="/">Connection</a></li>
           <li class="nav-item"><a class="nav-link" href="/register">Sign Up</a></li>
         {% endif %}
       </ul>
@@ -31,5 +31,26 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Cookie / GDPR banner for anonymous visitors -->
+<div id="gdpr-banner" style="position:fixed;left:0;right:0;bottom:0;background:#222;color:#fff;padding:12px;display:none;z-index:2000;">
+  <div class="container d-flex justify-content-between align-items-center">
+    <div>Nous utilisons des cookies nécessaires au fonctionnement du site. En continuant, vous acceptez notre <a href="/privacy" style="color:#9cf;">politique de confidentialité</a>.</div>
+    <div>
+      <button id="gdpr-accept" class="btn btn-sm btn-primary">Accepter</button>
+    </div>
+  </div>
+</div>
+<script>
+  try {
+    const consent = localStorage.getItem('gdpr_consent');
+    if (!consent) {
+      document.getElementById('gdpr-banner').style.display = 'block';
+      document.getElementById('gdpr-accept').addEventListener('click', function(){
+        localStorage.setItem('gdpr_consent', 'true');
+        document.getElementById('gdpr-banner').style.display = 'none';
+      });
+    }
+  } catch(e){}
+</script>
 </body>
 </html>
