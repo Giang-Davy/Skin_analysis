@@ -3,10 +3,12 @@ from flask import Blueprint, render_template, session, redirect, request
 from config import fs, captions_collection, folders_collection
 import base64
 from bson import ObjectId
+from routes.auth_routes import require_jwt_auth
 
 image_bp = Blueprint("images", __name__)
 
 @image_bp.route("/images", methods=["GET"])
+@require_jwt_auth
 def show_images():
     if "user_id" not in session:
         return redirect("/login")
@@ -63,6 +65,7 @@ def show_images():
 
 
 @image_bp.route("/delete/<file_id>", methods=["POST"])
+@require_jwt_auth
 def delete_image(file_id):
     if "user_id" not in session:
         return redirect('/login')
@@ -77,6 +80,7 @@ def delete_image(file_id):
 
 
 @image_bp.route("/delete_all", methods=["POST"])
+@require_jwt_auth
 def delete_all():
     if "user_id" not in session:
         return redirect("/login")
@@ -90,6 +94,7 @@ def delete_all():
 
 
 @image_bp.route("/delete_folder/<folder_name>", methods=["POST"])
+@require_jwt_auth
 def delete_folder(folder_name):
     if "user_id" not in session:
         return redirect("/login")
@@ -111,6 +116,7 @@ def delete_folder(folder_name):
 
 
 @image_bp.route("/edit_caption/<file_id>", methods=["POST"])
+@require_jwt_auth
 def edit_caption(file_id):
     if "user_id" not in session:
         return redirect("/login")
@@ -128,6 +134,7 @@ def edit_caption(file_id):
 
 
 @image_bp.route("/create_folder", methods=["POST"])
+@require_jwt_auth
 def create_folder():
     if "user_id" not in session:
         return redirect("/login")
@@ -146,6 +153,7 @@ def create_folder():
 
 
 @image_bp.route("/move_image/<file_id>", methods=["POST"])
+@require_jwt_auth
 def move_image(file_id):
     if "user_id" not in session:
         return redirect("/login")

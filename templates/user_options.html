@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}User Options - Skin Analysis{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="card-title mb-3">User Options</h2>
+        <p class="text-muted">Hello <strong>{{ username or 'user' }}</strong> 👋</p>
+
+        <div class="alert alert-info" role="alert">
+          <h5 class="alert-heading">Data protection (GDPR)</h5>
+          <p class="mb-2">
+            You can export your data, delete your account, and remove images associated with your profile.
+            Deletion is permanent and removes your account information and stored files.
+          </p>
+          <p class="mb-0">
+            By continuing, you confirm that you understand the consequences of deleting your account and associated data.
+          </p>
+        </div>
+
+        {% if error_message or error_message_fr %}
+          <div class="alert alert-warning" role="alert">
+            <div>{{ error_message_fr or error_message }}</div>
+            <div>{{ error_message or error_message_fr }}</div>
+          </div>
+        {% endif %}
+
+        <div class="d-grid gap-2 d-md-flex justify-content-md-start mb-4">
+          <a href="/export_data" class="btn btn-outline-primary">Export my data</a>
+        </div>
+
+        <hr>
+
+        <div class="alert alert-danger" role="alert">
+          <h4 class="alert-heading">Delete my account</h4>
+          <p class="mb-2">
+            This action will permanently delete your account, your history, your associated files, and your access to the application.
+          </p>
+          <p class="mb-0 fw-bold">
+            This action is irreversible.
+          </p>
+        </div>
+
+        <form method="post" class="border rounded p-3 bg-light">
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="confirm_delete" name="confirm_delete" value="on">
+            <label class="form-check-label fw-semibold" for="confirm_delete">
+              I confirm that I want to delete my account and my personal data.
+            </label>
+          </div>
+          <button type="submit" class="btn btn-danger btn-lg w-100">Confirm account deletion</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

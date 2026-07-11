@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
+import os
 from pymongo import MongoClient
 import gridfs
 import torch
 
 # === MongoDB ===
-client = MongoClient("mongodb://localhost:27017/")
-db = client["Data"]
+mongo_uri = os.environ.get("MONGO_URI", "mongodb://localhost:27017/")
+client = MongoClient(mongo_uri)
+db = client[os.environ.get("MONGO_DB_NAME", "Data")]
 fs = gridfs.GridFS(db)
-captions_collection = db["captions"]
-folders_collection = db["folders"]
-animals_collection = db["animals"]
-food_collection = db["foods"]
+
 
 # === PyTorch ===
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

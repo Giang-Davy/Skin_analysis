@@ -4,6 +4,10 @@
 
 <h2 class="mb-4">Upload an Image</h2>
 
+{% if error %}
+<div class="alert alert-danger" role="alert">{{ error }}</div>
+{% endif %}
+
 <form action="/upload" method="post" enctype="multipart/form-data" class="mb-3" onsubmit="showLoading()">
     <div class="upload-card mb-4">
         <div class="upload-card-content">
@@ -15,7 +19,7 @@
                     <input type="file" id="fileInput" name="file" class="upload-file-input" required>
                     <button type="submit" class="btn btn-primary ms-2">Upload</button>
                     <img src="{{ url_for('static', filename='images/upload-icon.png') }}" alt="">
-                </div>
+                </div> 
             </div>
             <div class="upload-icon"></div>
         </div>

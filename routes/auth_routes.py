@@ -1,12 +1,49 @@
 #!/usr/bin/env python3
+from functools import wraps
+
 from flask import Blueprint, request, render_template, redirect, session, make_response
 from db.mysql import get_connection
-import hashlib
 import mysql.connector
 import json
 from datetime import datetime
+from utils.security import (
+    create_access_token,
+    decode_access_token,
+    hash_password,
+    validate_password_strength,
+    verify_password,
+)
 
 auth_bp = Blueprint("auth_bp", __name__)
+
+
+def _get_token_from_request():
+    authorization = request.headers.get("Authorization", "")
+    if authorization.startswith("Bearer "):
+        return authorization.split(" ", 1)[1].strip()
+    return session.get("jwt_token")
+
+
+def require_jwt_auth(view_func):
+    @wraps(view_func)
+    def wrapped_view(*args, **kwargs):
+        token = _get_token_from_request()
+        if not token:
+            return redirect("/login")
+
+        try:
+            payload = decode_access_token(token)
+        except Exception:
+            session.clear()
+            return redirect("/login")
+
+        session["user_id"] = payload.get("user_id")
+        session["username"] = payload.get("username")
+        session["jwt_token"] = token
+        return view_func(*args, **kwargs)
+
+    return wrapped_view
+
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
@@ -14,26 +51,39 @@ def register():
         username = (request.form.get("username") or "").strip()
         email = (request.form.get("email") or "").strip()
         password = request.form.get("password") or ""
-        consent = True if request.form.get("gdpr_consent") == "on" else False
+        consent = request.form.get("gdpr_consent") == "on"
 
         if not username or not email or not password:
-            return render_template("register.html", error="Tous les champs sont requis.")
+            return render_template("register.html", error="All fields are required.")
 
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        try:
+            validate_password_strength(password)
+        except ValueError as exc:
+            return render_template("register.html", error=str(exc))
+
+        password_hash = hash_password(password)
 
         conn = get_connection()
         cursor = conn.cursor()
+        user_id = None
         try:
             cursor.execute(
                 "INSERT INTO users (username, email, password, consent_given, consent_ts) VALUES (%s, %s, %s, %s, %s)",
-                (username, email, password_hash, consent, datetime.now() if consent else None)
+                (username, email, password_hash, consent, datetime.now() if consent else None),
             )
             conn.commit()
+            user_id = cursor.lastrowid
         except mysql.connector.IntegrityError:
-            return render_template("register.html", error="Nom d'utilisateur ou email déjà utilisé.")
+            return render_template("register.html", error="Username or email already in use.")
         finally:
             cursor.close()
             conn.close()
+
+        if user_id:
+            token = create_access_token(user_id=user_id, username=username)
+            session["user_id"] = user_id
+            session["username"] = username
+            session["jwt_token"] = token
 
         return redirect("/")
 
@@ -49,26 +99,27 @@ def login():
         if not username or not password:
             return render_template("home.html", login_error="All fields are required.")
 
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
-
         conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
+        user = None
         try:
-            cursor.execute(
-                "SELECT id, username, email FROM users WHERE username=%s AND password=%s",
-                (username, password_hash)
-            )
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT id, username, email, password FROM users WHERE username=%s", (username,))
             user = cursor.fetchone()
         finally:
-            cursor.close()
+            try:
+                cursor.close()
+            except Exception:
+                pass
             conn.close()
 
-        if user:
-            session['user_id'] = user['id']
-            session['username'] = user['username']
+        if user and verify_password(password, user["password"]):
+            token = create_access_token(user_id=user["id"], username=user["username"])
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+            session["jwt_token"] = token
             return redirect("/")
-        else:
-            return render_template("home.html", login_error="Incorrect username or password.")
+
+        return render_template("home.html", login_error="Incorrect username or password.")
 
     return redirect("/")
 
@@ -78,13 +129,13 @@ def privacy():
     return render_template("privacy.html")
 
 
-@auth_bp.route("/gdpr/export", methods=["GET"])
-def gdpr_export():
+@auth_bp.route("/export_data")
+@require_jwt_auth
+def export_data():
     if "user_id" not in session:
-        return redirect('/login')
-    user_id = session['user_id']
+        return redirect("/login")
+    user_id = session["user_id"]
 
-    # fetch user from MySQL
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     try:
@@ -94,47 +145,43 @@ def gdpr_export():
         cursor.close()
         conn.close()
 
-    # lazy import of mongo collections to avoid circular imports
     from config import captions_collection, folders_collection
-    caps = []
+
+    captions = []
     for doc in captions_collection.find({"user_id": user_id}):
-        doc_copy = {k: (str(v) if hasattr(v, '__str__') and k == '_id' else v) for k, v in doc.items()}
-        # convert ObjectId for file_id
-        if 'file_id' in doc_copy:
-            doc_copy['file_id'] = str(doc_copy['file_id'])
-        caps.append(doc_copy)
-    folders = list(folders_collection.find({"user_id": user_id}, {'_id': 0}))
+        doc_copy = {k: (str(v) if k == "_id" else v) for k, v in doc.items()}
+        if "file_id" in doc_copy:
+            doc_copy["file_id"] = str(doc_copy["file_id"])
+        captions.append(doc_copy)
 
-    data = {
-        'user': user,
-        'captions': caps,
-        'folders': folders
-    }
-
+    folders = list(folders_collection.find({"user_id": user_id}, {"_id": 0}))
+    data = {"user": user, "captions": captions, "folders": folders}
     payload = json.dumps(data, default=str, ensure_ascii=False)
-    resp = make_response(payload)
-    resp.headers['Content-Type'] = 'application/json'
-    resp.headers['Content-Disposition'] = 'attachment; filename=user_data.json'
-    return resp
+    response = make_response(payload)
+    response.headers["Content-Type"] = "application/json"
+    response.headers["Content-Disposition"] = "attachment; filename=user_data.json"
+    return response
 
 
-@auth_bp.route("/gdpr/delete", methods=["POST"])
-def gdpr_delete():
-    if "user_id" not in session:
-        return redirect('/login')
-    user_id = session['user_id']
-
-    # delete files and captions from Mongo
+def _delete_current_user_account(user_id):
     from config import captions_collection, folders_collection, fs
-    for doc in captions_collection.find({"user_id": user_id}):
-        try:
-            fs.delete(doc['file_id'])
-        except Exception:
-            pass
-    captions_collection.delete_many({"user_id": user_id})
-    folders_collection.delete_many({"user_id": user_id})
 
-    # delete user from MySQL
+    try:
+        for doc in captions_collection.find({"user_id": user_id}):
+            try:
+                if doc.get("file_id"):
+                    fs.delete(doc["file_id"])
+            except Exception:
+                pass
+        captions_collection.delete_many({"user_id": user_id})
+    except Exception:
+        pass
+
+    try:
+        folders_collection.delete_many({"user_id": user_id})
+    except Exception:
+        pass
+
     conn = get_connection()
     cursor = conn.cursor()
     try:
@@ -144,8 +191,34 @@ def gdpr_delete():
         cursor.close()
         conn.close()
 
-    session.clear()
-    return redirect('/')
+
+@auth_bp.route("/user-options", methods=["GET", "POST"])
+@auth_bp.route("/options-utilisateur", methods=["GET", "POST"])
+@require_jwt_auth
+def user_options():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    if request.method == "POST":
+        confirmed = request.form.get("confirm_delete") in {"on", "true", "1", "yes"}
+        if not confirmed:
+            return render_template(
+                "user_options.html",
+                username=session.get("username"),
+                error_message="Please confirm the deletion to continue.",
+            )
+
+        _delete_current_user_account(session["user_id"])
+        session.clear()
+        return redirect("/")
+
+    return render_template("user_options.html", username=session.get("username"))
+
+
+@auth_bp.route("/delete_account", methods=["GET", "POST"])
+@require_jwt_auth
+def delete_account():
+    return user_options()
 
 
 @auth_bp.route("/logout")
