@@ -98,8 +98,4 @@ python run_all_tests.py
 
 ---
 
-Merci d'utiliser Skin_analysis — si vous voulez, je peux aussi :
-
-- ajouter des exemples d'utilisation détaillés,
-- documenter les endpoints API (`routes/`) avec des exemples cURL,
-- ajouter un Dockerfile pour containeriser l'application.
+Merci d'utiliser Skin_analysis !
