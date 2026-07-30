@@ -9,6 +9,8 @@ mongo_uri = os.environ.get("MONGO_URI", "mongodb://localhost:27017/")
 client = MongoClient(mongo_uri)
 db = client[os.environ.get("MONGO_DB_NAME", "Data")]
 fs = gridfs.GridFS(db)
+captions_collection = db["captions"]
+folders_collection = db["folders"]
 
 
 # === PyTorch ===

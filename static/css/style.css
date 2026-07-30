@@ -160,7 +160,6 @@ body {
     min-width: 160px;
 }
 
-/* Utility to vertically center content within the viewport (adjusts for header height) */
 .center-vertical {
     min-height: calc(100vh - 160px);
     display: flex;

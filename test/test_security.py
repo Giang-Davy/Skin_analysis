@@ -1,6 +1,10 @@
+import os
+import sys
 import unittest
 from io import BytesIO
 from PIL import Image
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from utils.security import (
     build_unique_storage_name,
@@ -33,7 +37,10 @@ class SecurityUtilsTest(unittest.TestCase):
         validate_password_strength("StrongPassword!123")
 
         with self.assertRaisesRegex(ValueError, "Password must be at least 8 characters long"):
-            validate_password_strength("weakpass")
+            validate_password_strength("weak")
+
+        with self.assertRaisesRegex(ValueError, "Password must be contain at least one special character"):
+            validate_password_strength("StrongPassword123")
 
     def test_jwt_round_trip(self):
         token = create_access_token(42, "alice")
