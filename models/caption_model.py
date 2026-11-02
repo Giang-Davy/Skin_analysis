@@ -37,8 +37,7 @@ def load_model():
     )
 
     _model = BlipForConditionalGeneration.from_pretrained(
-        "Salesforce/blip-image-captioning-base",
-        use_safetensors=True
+        "Salesforce/blip-image-captioning-base"
     )
 
     state_dict = torch.load(MODEL_WEIGHTS, map_location=DEVICE)
