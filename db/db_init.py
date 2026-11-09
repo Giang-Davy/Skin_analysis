@@ -53,6 +53,19 @@ def init_db():
         )
         """)
 
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS event_logs (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            event_type VARCHAR(50) NOT NULL,
+            actor_user_id INT NULL,
+            actor_username VARCHAR(100) NULL,
+            details VARCHAR(500) NOT NULL DEFAULT '',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_event_logs_created_at (created_at),
+            INDEX idx_event_logs_event_type (event_type)
+        )
+        """)
+
         conn.commit()
         logger.info("Tables initialized successfully!")
     finally:

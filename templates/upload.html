@@ -2,7 +2,13 @@
 {% block title %}Upload Image{% endblock %}
 {% block content %}
 
-<h2 class="mb-4">Upload an Image</h2>
+<div class="images-header">
+    <div>
+        <h2 class="mb-1">Upload an Image</h2>
+        <p class="text-muted mb-0">Choose an image to generate a description.</p>
+    </div>
+    <a href="/images" class="btn btn-outline-secondary">View my images</a>
+</div>
 
 {% if error %}
 <div class="alert alert-danger" role="alert">{{ error }}</div>
@@ -12,16 +18,24 @@
     <div class="upload-card mb-4">
         <div class="upload-card-content">
             <div class="upload-card-text">
-                <h3 class="upload-card-title">Upload your image</h3>
+                <h3 class="upload-card-title">Select an image</h3>
                 <p class="upload-card-description">Select an image to start the skin analysis.</p>
+                <div class="upload-options">
+                    <label class="form-label fw-semibold" for="upload-directory">Folder</label>
+                    <select id="upload-directory" name="directory" class="form-select">
+                        <option value="all">No folder</option>
+                        {% for directory in directories %}
+                            <option value="{{ directory }}">{{ directory }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="upload-controls">
                     <label for="fileInput" class="btn btn-secondary upload-select-btn">Choose an image</label>
                     <input type="file" id="fileInput" name="file" class="upload-file-input" required>
                     <button type="submit" class="btn btn-primary ms-2">Upload</button>
-                    <img src="{{ url_for('static', filename='images/upload-icon.png') }}" alt="">
                 </div> 
             </div>
-            <div class="upload-icon"></div>
+            <div class="upload-icon" aria-hidden="true"></div>
         </div>
     </div>
 </form>
@@ -30,8 +44,6 @@
     <div class="spinner-border text-primary mb-2" role="status"></div>
     <p>Generating caption, please wait...</p>
 </div>
-
-<a href="/images" class="btn btn-outline-secondary">View all</a>
 
 <script>
 function showLoading() {

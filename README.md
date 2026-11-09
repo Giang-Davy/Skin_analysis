@@ -6,6 +6,7 @@
 **Fonctionnalités**
 
 - **Upload d'images :** interface web pour téléverser des images cutanées.
+- **Organisation des images :** la section Albums affiche les noms des albums avec des options pour les renommer ou les supprimer; la section Toutes les images permet de parcourir et rechercher les images avec leurs tags, qui peuvent aussi être renommés ou supprimés. Les albums et les tags sont indépendants.
 - **Génération de légendes (captions) :** modèles BLIP fine-tunés pour produire des descriptions des images.
 - **Gestion des utilisateurs :** routes d'authentification simples pour accès/gestion.
 - **Persistance :** initialisation et configuration de la base (voir `db/`).
@@ -59,6 +60,17 @@ python app.py
 ```
 
 Puis ouvrez `http://127.0.0.1:5000` dans votre navigateur.
+
+**Journal d'administration**
+
+Le journal `/admin/logs` est réservé aux comptes dont le nom figure dans `ADMIN_USERNAMES`. Sous Windows CMD, définissez la liste avant de lancer l'application (plusieurs comptes peuvent être séparés par des virgules) :
+
+```cmd
+set ADMIN_USERNAMES=admin
+python app.py
+```
+
+Le journal MySQL `event_logs` est créé au démarrage. Il conserve notamment les connexions réussies/échouées, déconnexions explicites, créations/suppressions de comptes, uploads, modifications d'images, albums et tags. Les mots de passe et le contenu des légendes ne sont pas enregistrés.
 
 **Utilisation des modèles**
 

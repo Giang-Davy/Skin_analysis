@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Admin event logs - Skin Analysis{% endblock %}
+{% block content %}
+<div class="images-header">
+    <div>
+        <h2>Application event logs</h2>
+        <p class="text-muted mb-0">Most recent events, limited to 200 entries.</p>
+    </div>
+</div>
+
+<form method="get" class="admin-log-filter">
+    <label class="form-label fw-semibold" for="event-type">Filter by event</label>
+    <div class="input-group">
+        <select class="form-select" id="event-type" name="event_type">
+            <option value="">All events</option>
+            {% for event_type in event_types %}
+                <option value="{{ event_type }}" {% if selected_event_type == event_type %}selected{% endif %}>
+                    {{ event_type | replace('_', ' ') | title }}
+                </option>
+            {% endfor %}
+        </select>
+        <button class="btn btn-primary" type="submit">Filter</button>
+        {% if selected_event_type %}
+            <a class="btn btn-outline-secondary" href="/admin/logs">Clear</a>
+        {% endif %}
+    </div>
+</form>
+
+<div class="table-responsive">
+    <table class="table admin-log-table align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Date and time</th>
+                <th scope="col">Event</th>
+                <th scope="col">User</th>
+                <th scope="col">Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+                <tr>
+                    <td>{{ event.created_at.strftime("%Y-%m-%d %H:%M:%S") if event.created_at else "—" }}</td>
+                    <td><span class="event-label">{{ event.event_type | replace('_', ' ') | title }}</span></td>
+                    <td>{{ event.actor_username or "Unknown" }}</td>
+                    <td>{{ event.details or "—" }}</td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">No events recorded yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

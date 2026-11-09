@@ -1,38 +1,45 @@
 {% extends "base.html" %}
 {% block title %}Home - Skin Analysis{% endblock %}
 {% block content %}
-<div class="row">
-    <div class="col-md-7">
-        <h1 class="display-4 mb-4">Welcome to Skin Analysis</h1>
+<div class="row align-items-center g-4">
+    <div class="col-md-7 home-intro">
+        <h1 class="display-4 mb-3">Welcome to Skin Analysis</h1>
         <p class="lead mb-4">
             Explore our advanced skin analysis app. Use AI to analyze skin images and get accurate descriptive captions.
         </p>
         <p class="mb-4">
             Upload your images and let our model generate detailed skin condition descriptions.
         </p>
-        <a href="/upload" class="btn btn-primary btn-lg d-block mx-auto">Go to Upload</a>
+        {% if session.get("user_id") %}
+        {% endif %}
 
-        <div class="row mt-5">
+        <div class="row g-3 mt-4">
             <div class="col-md-4">
+                <div class="feature-card">
                 <h3>Easy Upload</h3>
                 <p>Upload your skin images in just a few clicks.</p>
+                </div>
             </div>
             <div class="col-md-4">
+                <div class="feature-card">
                 <h3>AI Analysis</h3>
                 <p>Our AI model analyzes and accurately describes your skin.</p>
+                </div>
             </div>
             <div class="col-md-4">
+                <div class="feature-card">
                 <h3>Instant Results</h3>
                 <p>Get descriptive captions in real-time.</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-5 center-vertical">
+    <div class="col-md-5">
         {% if not session.get("user_id") %}
-        <div class="card p-4 shadow-sm w-100">
+        <div id="sign-in" class="card login-card shadow-sm w-100">
             <div class="auth-form mx-auto">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="d-block mx-auto mb-3" style="width:350px;">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="brand-logo d-block mx-auto mb-3">
                 <h2 class="mb-4">Sign In</h2>
                 {% if login_error %}
                 <div class="alert alert-danger">{{ login_error }}</div>
@@ -44,16 +51,19 @@
                     <div class="mb-3">
                         <input type="password" name="password" placeholder="Password" class="form-control" required>
                     </div>
-                    <button type="submit" class="btn btn-success w-100">Sign In</button>
+                    <button type="submit" class="btn btn-primary w-100">Sign In</button>
                 </form>
                 <p class="mt-3 text-center">Not registered yet ? <a href="/register">Sign Up</a></p>
             </div>
         </div>
         {% else %}
-        <div class="card p-4 shadow-sm text-center w-100">
+        <div class="card login-card shadow-sm text-center w-100">
             <h4>Welcome</h4>
             <p>You are logged in.</p>
-            <a href="/upload" class="btn btn-primary mt-2 d-inline-block">Go to Upload</a>
+            <div class="home-actions justify-content-center">
+                <a href="/upload" class="btn btn-primary">Go to Upload</a>
+                <a href="/images" class="btn btn-outline-secondary">View my images</a>
+            </div>
         </div>
         {% endif %}
     </div>

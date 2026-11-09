@@ -1,58 +1,92 @@
 {% extends "base.html" %}
-{% block title %}My Images{% endblock %}
+{% block title %}Toutes les images - Skin Analysis{% endblock %}
 {% block content %}
-<h2 class="mb-4">Uploaded Images</h2>
-
-<form action="/create_folder" method="post" class="mb-3">
-    <div class="input-group">
-        <input name="new_folder" type="text" class="form-control" placeholder="Create a Tag (e.g. face)">
-        <button class="btn btn-outline-success" type="submit">Create</button>
+<div class="images-header">
+    <div>
+        <h2>{% if filtering_by_tags %}Tag search results{% elif selected_directory != 'all' %}{{ selected_directory }}{% else %}Toutes les images{% endif %}</h2>
+        {% if selected_directory != 'all' and not filtering_by_tags %}
+            <a href="/albums" class="small text-decoration-none">← Back to albums</a>
+            <form action="/delete_folder/{{ selected_directory | urlencode }}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-danger mt-2" onclick="return confirm('Delete this album? Its images and tags will be kept.')">Delete album</button>
+            </form>
+        {% endif %}
     </div>
-    <small class="text-muted">Tag will help to organize your descriptions.</small>
-</form>
-
-<div class="mb-3">
-    <div class="d-flex align-items-center gap-2 mb-2">
-        <strong>Filter by tags:</strong>
-        <button class="btn btn-outline-primary btn-sm" onclick="clearTagFilters()">Clear</button>
-        <button class="btn btn-outline-success btn-sm" onclick="applyTagFilters()">Apply</button>
-    </div>
-    <div class="tag-filter">
-        {% for folder in folders %}
-            <label class="form-check form-check-inline">
-                <input class="form-check-input tag-filter-checkbox" type="checkbox" value="{{ folder }}" {% if folder == 'all' %}checked disabled{% endif %}>
-                <span class="form-check-label">{{ folder }}</span>
-            </label>
-        {% endfor %}
-    </div>
-    <div class="mt-2 folder-list">
-        <a href="/images?folder=all" class="btn btn-outline-primary {{ 'active' if selected_folder == 'all' else '' }}">All</a>
-        {% for folder in folders %}
-            {% if folder != 'all' %}
-                <span class="folder-pill btn btn-outline-secondary {{ 'active' if selected_folder == folder else '' }}">
-                    <a href="/images?folder={{ folder | urlencode }}" class="text-decoration-none text-dark">{{ folder }}</a>
-                    <form action="/delete_folder/{{ folder }}" method="post" class="d-inline ms-1">
-                        <button type="submit" class="btn btn-sm btn-outline-danger p-1" title="Delete folder" onclick="return confirm('Delete folder {{ folder }}?')">✖</button>
-                    </form>
-                </span>
+    {% if selected_directory == 'all' %}
+        <div class="toolbar-actions">
+            {% if filtering_by_tags %}
+                <a href="/images" class="btn btn-outline-secondary">Clear tag search</a>
             {% endif %}
-        {% endfor %}
-    </div>
+            <a href="/albums" class="btn btn-outline-secondary">Albums</a>
+            <a href="/upload" class="btn btn-primary">Upload an image</a>
+        </div>
+    {% endif %}
 </div>
 
-<form action="/delete_all" method="post" class="mb-4">
-    <button type="submit" class="btn btn-danger">Delete all</button>
-</form>
+{% if selected_directory == 'all' %}
+<details class="tag-management">
+    <summary>Manage tags and filters</summary>
+    <div class="images-toolbar">
+        <form action="/create_tag" method="post" class="folder-create">
+            <label for="new-tag" class="form-label fw-semibold">Create a tag</label>
+            <div class="input-group">
+                <input id="new-tag" name="new_tag" type="text" class="form-control" maxlength="80" placeholder="e.g. redness" required>
+                <button class="btn btn-outline-secondary" type="submit">Create</button>
+            </div>
+            <small>Tags can be used to find images across albums.</small>
+        </form>
+
+        <section class="filter-section" aria-label="Image filters">
+            <div class="filter-heading">
+                <strong>Filter by tags</strong>
+                <div class="toolbar-actions">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" onclick="clearTagFilters()">Clear</button>
+                    <button class="btn btn-primary btn-sm" type="button" onclick="applyTagFilters()">Apply filters</button>
+                </div>
+            </div>
+            <div class="tag-filter">
+                {% for tag in tags %}
+                    <div class="tag-filter-item">
+                        <label class="form-check">
+                            <input class="form-check-input tag-filter-checkbox" type="checkbox" aria-label="Filter by {{ tag }}" value="{{ tag }}" {% if tag in selected_tags %}checked{% endif %}>
+                        </label>
+                        <div class="dropdown">
+                            <button class="tag-name-option" type="button" data-bs-toggle="dropdown" aria-expanded="false">{{ tag }}</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><button class="dropdown-item" type="button" onclick="renameItem(event, '/rename_tag/{{ tag | urlencode }}', {{ tag | tojson }})">Rename tag</button></li>
+                                <li>
+                                    <form action="/delete_tag/{{ tag | urlencode }}" method="post">
+                                        <button class="dropdown-item text-danger" type="submit" onclick="return confirm('Delete this tag from all images?')">Delete tag</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                {% else %}
+                    <span class="text-muted">No tags yet.</span>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</details>
+{% endif %}
+
+{% if selected_directory == 'all' and not filtering_by_tags %}
+<div class="destructive-actions">
+    <form action="/delete_all" method="post">
+        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Delete all images?')">Delete all images</button>
+    </form>
+</div>
+{% endif %}
 
 <div class="row">
-    {% if images|length == 0 %}
+    {% if images|length == 0 and selected_directory == 'all' %}
     <div class="col-12 mb-4">
-        <div class="alert alert-info">No images are available. Upload an image to get started.</div>
+        <div class="alert alert-info">{% if filtering_by_tags %}No images match the selected tags.{% else %}No images are available. Upload an image to get started.{% endif %}</div>
     </div>
     {% endif %}
     {% for item in images %}
     <div class="col-md-4 mb-4">
-        <div class="card shadow-sm position-relative image-card" data-file-id="{{ item.file_id }}" data-current-folder="{{ item.folder }}" data-current-tags="{{ item.tags | join(',') }}">
+        <div class="card shadow-sm position-relative image-card" data-file-id="{{ item.file_id }}" data-current-tags="{{ item.tags | join(',') }}">
             <!-- Image -->
             <img src="data:image/jpeg;base64,{{ item.img }}" class="card-img-top image-preview">
             
@@ -77,24 +111,17 @@
             </div>
 
             <div class="card-body">
-                <!-- Folder / Tags display -->
-                <p class="mb-2"><strong>Tag :</strong>
-                    {% set effective_tags = item.tags if item.tags is defined else [] %}
-                    {% if effective_tags | length > 0 and not (effective_tags | length == 1 and effective_tags[0] == 'all') %}
-                        <span class="ms-2">
-                            {% for t in effective_tags %}
-                                {% if t and t != 'all' %}
-                                    <label class="form-check form-check-inline mb-0">
-                                        <input class="form-check-input" type="checkbox" disabled checked>
-                                        <span class="form-check-label small">{{ t }}</span>
-                                    </label>
-                                {% endif %}
-                            {% endfor %}
-                        </span>
+                {% if not filtering_by_tags and item.directory != 'all' %}
+                    <p class="mb-2"><strong>Folder:</strong> <span class="folder-display">{{ item.directory }}</span></p>
+                {% endif %}
+                <div class="image-tags mb-3">
+                    <strong>Tags:</strong>
+                    {% for tag in item.tags %}
+                        <span class="tag-pill">{{ tag }}</span>
                     {% else %}
-                        <span class="folder-display ms-2">{{ item.folder }}</span>
-                    {% endif %}
-                </p>
+                        <span class="text-muted">No tags</span>
+                    {% endfor %}
+                </div>
                 
                 <!-- Normal mode : caption display -->
                 <div class="caption-display-mode">
@@ -110,20 +137,32 @@
                     </div>
                 </div>
 
-                <!-- Move mode : tags multi-selector -->
+                <!-- Folder and tags are edited independently. -->
                 <div class="move-mode" style="display: none;">
-                    <label class="form-label small">Select tags (multiple):</label>
                     <form action="/move_image/{{ item.file_id }}" method="post" class="move-form">
+                        {% if not filtering_by_tags %}
+                        <label class="form-label small" for="directory-{{ item.file_id }}">Folder</label>
+                        <select id="directory-{{ item.file_id }}" class="form-select mb-3" name="directory">
+                            <option value="all" {% if item.directory == 'all' %}selected{% endif %}>No folder</option>
+                            {% for directory in directories %}
+                                <option value="{{ directory }}" {% if item.directory == directory %}selected{% endif %}>{{ directory }}</option>
+                            {% endfor %}
+                        </select>
+                        {% endif %}
+                        <label class="form-label small">Tags (can belong to multiple)</label>
                         <div class="folder-selector">
-                            {% for folder in folders %}
+                            {% for tag in tags %}
                                 <label class="form-check me-2">
-                                    <input class="form-check-input" type="checkbox" name="tags" value="{{ folder }}" {% if folder=='all' %}checked{% endif %}>
-                                    <span class="form-check-label">{{ folder }}</span>
+                                    <input class="form-check-input" type="checkbox" name="tags" value="{{ tag }}" {% if tag in item.tags %}checked{% endif %}>
+                                    <span class="form-check-label">{{ tag }}</span>
                                 </label>
                             {% endfor %}
+                            {% if not tags %}
+                                <span class="text-muted small">Create tags above to assign them to images.</span>
+                            {% endif %}
                         </div>
                         <div class="mt-2 d-flex gap-2">
-                            <button class="btn btn-sm btn-primary" type="submit">Apply</button>
+                            <button class="btn btn-sm btn-primary" type="submit">Save changes</button>
                             <button class="btn btn-sm btn-secondary" type="button" onclick="cancelMove(event, this)">✖️ Cancel</button>
                         </div>
                     </form>
@@ -134,98 +173,26 @@
     {% endfor %}
 </div>
 
-<style>
-.image-card {
-    transition: transform 0.2s;
-}
-
-.image-card:hover {
-    transform: translateY(-2px);
-}
-
-.dropdown-menu {
-    min-width: 150px;
-}
-
-.dropdown-item {
-    cursor: pointer;
-}
-
-.dropdown-item:hover {
-    background-color: #f8f9fa;
-}
-
-.caption-edit-mode,
-.move-mode {
-    animation: slideDown 0.2s ease-in;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.folder-selector {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.folder-selection-item {
-    align-items: center;
-}
-
-.delete-folder-btn {
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.folder-selection-item:hover .delete-folder-btn {
-    opacity: 1;
-}
-
-.folder-btn {
-    flex: 1;
-    min-width: 70px;
-}
-
-.folder-btn.active {
-    background-color: #0d6efd;
-    color: white;
-    border-color: #0d6efd;
-}
-
-.folder-list .folder-pill {
-    display: inline-flex;
-    align-items: center;
-    margin-right: 0.4rem;
-    padding: 0.2rem 0.4rem;
-    border-radius: 0.4rem;
-}
-
-.folder-list .folder-pill form {
-    margin: 0;
-}
-
-.auto-resize {
-    resize: none;
-    overflow: hidden;
-}
-
-.caption-text {
-    word-wrap: break-word;
-    white-space: pre-wrap;
-    margin: 0;
-}
-</style>
-
 <script>
+function renameItem(event, action, currentName) {
+    event.preventDefault();
+    const newName = window.prompt("Enter a new name:", currentName);
+    if (newName === null || !newName.trim() || newName.trim() === currentName) {
+        return;
+    }
+
+    const form = document.createElement("form");
+    form.method = "post";
+    form.action = action;
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "new_name";
+    input.value = newName.trim();
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+}
+
 // Restore tag filter checkboxes from localStorage on load
 document.addEventListener('DOMContentLoaded', () => {
     try {

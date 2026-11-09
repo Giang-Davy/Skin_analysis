@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Albums - Skin Analysis{% endblock %}
+{% block content %}
+<div class="images-header">
+    <h2>Albums</h2>
+    <a href="/images" class="btn btn-outline-secondary">Toutes les images</a>
+</div>
+
+<form action="/create_folder" method="post" class="album-create">
+    <label for="album-name" class="form-label fw-semibold">Create an album</label>
+    <div class="input-group">
+        <input id="album-name" name="new_folder" type="text" class="form-control" maxlength="80" placeholder="e.g. Eczema" required>
+        <button class="btn btn-primary" type="submit">Create album</button>
+    </div>
+</form>
+
+<section class="album-list" aria-label="Your albums">
+    {% for directory in directories %}
+        <div class="album-row">
+            <a class="album-name" href="/images?directory={{ directory | urlencode }}">{{ directory }}</a>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary album-menu-button" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Options for {{ directory }}">⋯</button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><button class="dropdown-item" type="button" onclick="renameItem(event, '/rename_folder/{{ directory | urlencode }}', {{ directory | tojson }})">Rename album</button></li>
+                    <li>
+                        <form action="/delete_folder/{{ directory | urlencode }}" method="post">
+                            <button class="dropdown-item text-danger" type="submit" onclick="return confirm('Delete this album? Its images and tags will be kept.')">Delete album</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    {% else %}
+        <p class="text-muted album-empty">No albums yet. Create one above to organize your images.</p>
+    {% endfor %}
+</section>
+<script>
+function renameItem(event, action, currentName) {
+    event.preventDefault();
+    const newName = window.prompt("Enter a new name:", currentName);
+    if (newName === null || !newName.trim() || newName.trim() === currentName) {
+        return;
+    }
+
+    const form = document.createElement("form");
+    form.method = "post";
+    form.action = action;
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "new_name";
+    input.value = newName.trim();
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+{% endblock %}

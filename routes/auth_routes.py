@@ -2,6 +2,7 @@
 from functools import wraps
 
 from flask import Blueprint, request, render_template, redirect, session, make_response
+from db.audit import record_event
 from db.mysql import get_connection
 import mysql.connector
 import json
@@ -80,6 +81,11 @@ def register():
             conn.close()
 
         if user_id:
+            record_event(
+                "registration",
+                actor_user_id=user_id,
+                actor_username=username,
+            )
             token = create_access_token(user_id=user_id, username=username)
             session["user_id"] = user_id
             session["username"] = username
@@ -97,6 +103,11 @@ def login():
         password = request.form.get("password") or ""
 
         if not username or not password:
+            record_event(
+                "login_failed",
+                actor_username=username or None,
+                details="Missing username or password",
+            )
             return render_template("home.html", login_error="All fields are required.")
 
         conn = get_connection()
@@ -113,12 +124,23 @@ def login():
             conn.close()
 
         if user and verify_password(password, user["password"]):
+            record_event(
+                "login_success",
+                actor_user_id=user["id"],
+                actor_username=user["username"],
+            )
             token = create_access_token(user_id=user["id"], username=user["username"])
             session["user_id"] = user["id"]
             session["username"] = user["username"]
             session["jwt_token"] = token
             return redirect("/")
 
+        record_event(
+            "login_failed",
+            actor_user_id=user["id"] if user else None,
+            actor_username=username or None,
+            details="Invalid credentials",
+        )
         return render_template("home.html", login_error="Incorrect username or password.")
 
     return redirect("/")
@@ -160,6 +182,11 @@ def export_data():
     response = make_response(payload)
     response.headers["Content-Type"] = "application/json"
     response.headers["Content-Disposition"] = "attachment; filename=user_data.json"
+    record_event(
+        "data_exported",
+        actor_user_id=user_id,
+        actor_username=session.get("username"),
+    )
     return response
 
 
@@ -208,7 +235,14 @@ def user_options():
                 error_message="Please confirm the deletion to continue.",
             )
 
-        _delete_current_user_account(session["user_id"])
+        user_id = session["user_id"]
+        username = session.get("username")
+        _delete_current_user_account(user_id)
+        record_event(
+            "account_deleted",
+            actor_user_id=user_id,
+            actor_username=username,
+        )
         session.clear()
         return redirect("/")
 
@@ -223,5 +257,11 @@ def delete_account():
 
 @auth_bp.route("/logout")
 def logout():
+    if session.get("user_id"):
+        record_event(
+            "logout",
+            actor_user_id=session.get("user_id"),
+            actor_username=session.get("username"),
+        )
     session.clear()
     return redirect("/")

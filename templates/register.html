@@ -6,7 +6,7 @@
 {% if error %}
 <div class="alert alert-danger" role="alert">{{ error }}</div>
 {% endif %}
-<form action="/register" method="post" class="w-50 mx-auto">
+<form action="/register" method="post" class="mx-auto">
     <div class="mb-3">
         <input type="text" name="username" placeholder="User Name" class="form-control" required>
     </div>
@@ -21,7 +21,7 @@
         <input type="checkbox" class="form-check-input" id="gdpr_consent" name="gdpr_consent" required>
         <label class="form-check-label" for="gdpr_consent">I agree to the <a href="/privacy">privacy policy</a>.</label>
     </div>
-    <button type="submit" class="btn btn-primary">Sign Up</button>
+    <button type="submit" class="btn btn-primary w-100">Sign Up</button>
 </form>
 <p class="mt-3 text-center">Already registered? <a href="/login">Sign In</a></p>
 </div>
